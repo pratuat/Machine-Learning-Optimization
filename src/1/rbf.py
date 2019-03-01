@@ -1,35 +1,29 @@
 ##
-import pickle
-import datetime
 import numpy as np
 import pandas as pd
-
 import scipy.optimize as optimize
-
 from sklearn.cluster import KMeans
 from sklearn.base import BaseEstimator
-from sklearn.preprocessing import normalize
-from sklearn.metrics import confusion_matrix
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 from sklearn.metrics.pairwise import rbf_kernel
-from sklearn.model_selection import GridSearchCV
+
+# import pickle
+# from numba import vectorize, jit
+# from sklearn.model_selection import GridSearchCV
 
 ##
 
-train_1 = pd.read_csv('/Users/pratuat/course_materials/omml/project/data/Train_1.csv').iloc[:, :257]
-train_8 = pd.read_csv('/Users/pratuat/course_materials/omml/project/data/Train_8.csv').iloc[:, :257]
-train_1.iloc[:, 0] = 0 # (1005, 257)
-train_8.iloc[:, 0] = 1 # (542, 257)
-
-train_data = np.asanyarray(pd.concat([train_1.iloc[:, :], train_8.iloc[:, :]], axis=0, ignore_index=True))
-np.random.shuffle(train_data)
-
-train_x_data = normalize(train_data[:, 1:])
-train_y_data = train_data[:, 0]
+data = pd.read_csv('data/DATA.csv')
+data_split_margin = int(0.8 * data.shape[0])
+X_train_data = np.asanyarray(data.iloc[:data_split_margin, 0:2])
+Y_train_data = np.asanyarray(data.iloc[:data_split_margin, 2])
+X_test_data = np.asanyarray(data.iloc[data_split_margin:, 0:2])
+Y_test_data = np.asanyarray(data.iloc[data_split_margin:, 2])
 
 ##
-
-class RbfNN(BaseEstimator):
-    def __init__(self, noc = 5, solver = 'BFGS', sigma = 2, rho1 = 1e-3, rho2 = 1e-3):
+class RBF(BaseEstimator):
+    def __init__(self, noc = 5, solver = 'L-BFGS-B', sigma = 2, rho1 = 1e-3, rho2 = 1e-3):
         self.noc = noc
         self.solver = solver
         self.sigma = sigma
@@ -66,46 +60,49 @@ class RbfNN(BaseEstimator):
         print(self.noc, self.solver, self.sigma, self.rho1, self.rho2)
         print('=' * 50)
 
+    def __prediction_error(self, py, ty):
+        return np.sum(np.square(py - ty)) / len(ty)
+
     def __sigmoid(self, x):
         return 1 / (1 + np.exp(-x))
 
     def __setup_interpolation_matrix(self, x):
-        return rbf_kernel(X=x, Y=self.centers, gamma=1/self.sigma**2)
-
-    def __sum_of_squared_error(self, py, ty):
-        return np.sum(np.square(py - ty)) / (2 *len(ty))
+        return rbf_kernel(X=x, Y=self.centers, gamma=0.25)
 
     def __error_function(self, training_parameters):
         self.__set_centers_and_weights(training_parameters)
-
         interpolation_matrix = self.__setup_interpolation_matrix(self.X)
 
         predictions = np.dot(interpolation_matrix, self.weights)
+        # predictions = np.dot(interpolation_matrix, self.weights)
 
-        sum_of_squared_error = self.__sum_of_squared_error(predictions, self.Y)
-        regularization_error = self.rho1/2 * np.sum(np.square(self.weights)) + self.rho2/2 * np.sum(np.square(self.centers.flatten()))
-        total_error = sum_of_squared_error + regularization_error
+        # squared_error = self.__prediction_error(self.__to_binary(predictions), self.Y)
+        squared_error = np.sum(np.square(predictions - self.Y)) / (2 * len(self.Y))
 
-        print("SSE: ", sum_of_squared_error, "RE: ", regularization_error, "TE: ", total_error)
+        # regularization_error = self.rho1/2 * np.sum(np.square(self.weights)) + self.rho2/2 * np.sum(np.square(self.centers.flatten()))
 
-        return total_error
+        # model_error = squared_error + regularization_error
+
+        # self.squared_error = squared_error
+        # print("SSE: ", squared_error, "ME: ", model_error)
+        # print(confusion_matrix(self.Y, self.__to_binary(predictions)))
+
+        return squared_error
 
     def fit(self, x, y=None):
         self.__print_model_params()
-
         self.X = x
         self.Y = y
         self.X_dim = self.X.shape[1]
         self.__setup_centers()
         self.__setup_weights()
 
+        # model_error = self.__error_function(np.concatenate((self.centers.flatten(), self.weights), axis = 0))
+
         result = optimize.minimize(
             fun = self.__error_function,
             x0 = np.concatenate((self.centers.flatten(), self.weights), axis = 0),
-            method = self.solver,
-            options = {
-                'maxiter' : 50
-            }
+            method = self.solver
         )
 
         self.result = result
@@ -117,46 +114,25 @@ class RbfNN(BaseEstimator):
         interpolation_matrix = self.__setup_interpolation_matrix(x)
         predictions = np.dot(interpolation_matrix, self.weights)
 
-        return self.__to_binary(predictions)
+        return predictions
+##
 
+model = RBF(noc = 30).fit(x = X_train_data, y = Y_train_data)
 
 ##
 
-X = train_x_data[:, :]
-Y = train_y_data[:]
+X = np.arange(-2, 2.5, 0.05)
+Y = np.arange(-2, 2.5, 0.05)
+X, Y = np.meshgrid(X, Y)
 
-param_grid = {
-    'noc' : [5, 10, 20, 30],
-    'solver' : ['L-BFGS-B', 'BFGS', 'Powell', 'Newton-CG'],
-    'sigma' : [2, 3, 4],
-    'rho1' : [1e-3, 1e-4, 1e-5],
-    'rho2' : [1e-3, 1e-4, 1e-5]
-}
+inputs = np.array([X.flatten(), Y.flatten()]).T
+predicted_outputs = model.predict(inputs)
+Z = predicted_outputs.reshape((len(X), len(Y)))
 
-gs = GridSearchCV(
-    RbfNN(),
-    param_grid,
-    n_jobs=-1,
-    scoring='accuracy'
-).fit(X, y=Y)
+fig = plt.figure(figsize=(8,8))
+ax = plt.axes(projection='3d')
+ax.plot_surface(X, Y, Z)
+plt.show()
 
-print("Grid Search completed")
+###
 
-gs_file = open("data/grid_search_" + str(datetime.datetime.now()) + ".pickle", 'wb')
-pickle.dump(gs, gs_file)
-
-##
-
-X = train_x_data[:900, :]
-Y = train_y_data[:900]
-
-rbf_nn = RbfNN(10).fit(X, Y)
-
-##
-
-Xte = train_x_data[900:, :]
-Yte = train_y_data[900:]
-
-print(confusion_matrix(Yte, rbf_nn.predict(Xte)))
-
-##
