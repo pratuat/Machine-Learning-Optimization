@@ -29,12 +29,11 @@ train_y_data = train_data[:, 0]
 ##
 
 class RbfNN(BaseEstimator):
-    def __init__(self, noc = 5, solver = 'BFGS', sigma = 2, rho1 = 1e-3, rho2 = 1e-3, optimizer_options = {}):
+    def __init__(self, noc = 5, solver = 'BFGS', sigma = 2, rho = 1e-3, optimizer_options = {}):
         self.noc = noc
         self.solver = solver
         self.sigma = sigma
-        self.rho1 = rho1
-        self.rho2 = rho2
+        self.rho = rho
         self.optimizer_options = optimizer_options
 
         self.X = None
@@ -64,7 +63,7 @@ class RbfNN(BaseEstimator):
 
     def __print_model_params(self):
         print('='*50)
-        print(self.noc, self.solver, self.sigma, self.rho1, self.rho2)
+        print("NOC: ", self.noc, "SOLVER: ", self.solver, "SIGMA: ", self.sigma, "RHO: ", self.rho)
         print('=' * 50)
 
     def __sigmoid(self, x):
@@ -84,7 +83,7 @@ class RbfNN(BaseEstimator):
         predictions = np.dot(interpolation_matrix, self.weights)
 
         sum_of_squared_error = self.__sum_of_squared_error(predictions, self.Y)
-        regularization_error = self.rho1/2 * np.sum(np.square(self.weights)) + self.rho2/2 * np.sum(np.square(self.centers.flatten()))
+        regularization_error = self.rho/2 * (np.sum(np.square(self.weights)) + np.sum(np.square(self.centers.flatten())))
         total_error = sum_of_squared_error + regularization_error
 
         print("SSE: ", sum_of_squared_error, "RE: ", regularization_error, "TE: ", total_error)
@@ -118,6 +117,7 @@ class RbfNN(BaseEstimator):
 
         return self.__to_binary(predictions)
 
+
 ##
 
 X = train_x_data[:, :]
@@ -127,8 +127,10 @@ param_grid = {
     'noc' : [5, 10, 20, 30],
     'solver' : ['L-BFGS-B', 'BFGS', 'Powell', 'Newton-CG'],
     'sigma' : [2, 3, 4],
-    'rho1' : [1e-3, 1e-4, 1e-5],
-    'rho2' : [1e-3, 1e-4, 1e-5]
+    'rho' : [1e-3, 1e-4, 1e-5],
+    'optimizer_options': [
+        { 'maxiter' : 1}
+    ]
 }
 
 gs = GridSearchCV(
@@ -140,17 +142,15 @@ gs = GridSearchCV(
 
 print("Grid Search completed")
 
-gs_file = open("data/grid_search_" + str(datetime.datetime.now()) + ".pickle", 'wb')
-pickle.dump(gs, gs_file)
+# gs_file = open("data/grid_search_" + str(datetime.datetime.now()) + ".pickle", 'wb')
+# pickle.dump(gs, gs_file)
 
 ##
 
 X = train_x_data[:900, :]
 Y = train_y_data[:900]
 
-rbf_nn = RbfNN(10).fit(X, Y)
-
-##
+rbf_nn = RbfNN(10, optimizer_options = { 'maxiter' : 1}).fit(X, Y)
 
 Xte = train_x_data[900:, :]
 Yte = train_y_data[900:]
