@@ -1,4 +1,5 @@
 ##
+import pdb
 import pickle
 import datetime
 import numpy as np
@@ -12,16 +13,23 @@ from sklearn.preprocessing import normalize
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics.pairwise import rbf_kernel
 from sklearn.model_selection import GridSearchCV
+from sklearn.preprocessing import LabelBinarizer
 
 ##
 
 train_1 = pd.read_csv('/Users/pratuat/course_materials/omml/project/data/Train_1.csv').iloc[:, :257]
+train_2 = pd.read_csv('/Users/pratuat/course_materials/omml/project/data/Train_2.csv').iloc[:, :257]
 train_8 = pd.read_csv('/Users/pratuat/course_materials/omml/project/data/Train_8.csv').iloc[:, :257]
-train_1.iloc[:, 0] = 0 # (1005, 257)
-train_8.iloc[:, 0] = 1 # (542, 257)
 
-train_data = np.asanyarray(pd.concat([train_1.iloc[:, :], train_8.iloc[:, :]], axis=0, ignore_index=True))
-np.random.shuffle(train_data)
+train_data = np.asanyarray(
+    pd.concat(
+        [
+            train_1.iloc[:, :],
+            train_2.iloc[:, :],
+            train_8.iloc[:, :]
+        ], axis=0, ignore_index=True
+    )
+)
 
 train_x_data = normalize(train_data[:, 1:])
 train_y_data = train_data[:, 0]
@@ -29,12 +37,13 @@ train_y_data = train_data[:, 0]
 ##
 
 class RbfNN(BaseEstimator):
-    def __init__(self, noc = 5, solver = 'BFGS', sigma = 2, rho1 = 1e-3, rho2 = 1e-3):
+    def __init__(self, noc = 5, solver = 'BFGS', sigma = 2, rho1 = 1e-3, rho2 = 1e-3, optimizer_options = {}):
         self.noc = noc
         self.solver = solver
         self.sigma = sigma
         self.rho1 = rho1
         self.rho2 = rho2
+        self.optimizer_options = optimizer_options
 
         self.X = None
         self.Y = None
@@ -103,9 +112,7 @@ class RbfNN(BaseEstimator):
             fun = self.__error_function,
             x0 = np.concatenate((self.centers.flatten(), self.weights), axis = 0),
             method = self.solver,
-            options = {
-                'maxiter' : 50
-            }
+            options = self.optimizer_options
         )
 
         self.result = result
@@ -119,10 +126,65 @@ class RbfNN(BaseEstimator):
 
         return self.__to_binary(predictions)
 
+class RbfNNMC(BaseEstimator):
+    def __init__(self, noc = 5, solver = 'BFGS', sigma = 2, rho1 = 1e-3, rho2 = 1e-3):
+        self.noc = noc
+        self.solver = solver
+        self.sigma = sigma
+        self.rho1 = rho1
+        self.rho2 = rho2
+
+        self.X = None
+        self.Y = None
+        self.X_dim = None
+        self.Y_dim = None
+        self.models = None
+
+    def fit(self, x, y=None):
+        self.X = x
+        self.Y = y
+        self.X_dim = self.X.shape[1]
+        self.Y_dim = self.Y.shape[1]
+
+        self.models = []
+
+        for i in range(self.Y_dim):
+            model = RbfNN(
+                noc = self.noc,
+                solver = self.solver,
+                sigma = self.sigma,
+                rho1 = self.rho1,
+                rho2 = self.rho2,
+                optimizer_options = {
+                    'maxiter' : 10
+                }
+            )
+
+            model.fit(x = self.X, y = self.Y[:, i])
+            self.models.append(model)
+
+        return self
+
+    def predict(self, x, y=None):
+        prediction = []
+
+        for model in self.models:
+            prediction.append(model.predict(x))
+
+        return np.array(prediction).T
 ##
 
+label_binarizer = LabelBinarizer()
+
 X = train_x_data[:, :]
-Y = train_y_data[:]
+Y = label_binarizer.fit_transform(train_y_data[:])
+
+rbf_nnmc = RbfNNMC(5).fit(X, Y)
+preds = rbf_nnmc.predict(X)
+
+confusion_matrix(train_y_data[:], label_binarizer.inverse_transform(preds))
+
+##
 
 param_grid = {
     'noc' : [5, 10, 20, 30],
@@ -143,19 +205,5 @@ print("Grid Search completed")
 
 gs_file = open("data/grid_search_" + str(datetime.datetime.now()) + ".pickle", 'wb')
 pickle.dump(gs, gs_file)
-
-##
-
-X = train_x_data[:900, :]
-Y = train_y_data[:900]
-
-rbf_nn = RbfNN(10).fit(X, Y)
-
-##
-
-Xte = train_x_data[900:, :]
-Yte = train_y_data[900:]
-
-print(confusion_matrix(Yte, rbf_nn.predict(Xte)))
 
 ##
