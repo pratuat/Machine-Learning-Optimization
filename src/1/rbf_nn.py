@@ -29,12 +29,13 @@ train_y_data = train_data[:, 0]
 ##
 
 class RbfNN(BaseEstimator):
-    def __init__(self, noc = 5, solver = 'BFGS', sigma = 2, rho1 = 1e-3, rho2 = 1e-3):
+    def __init__(self, noc = 5, solver = 'BFGS', sigma = 2, rho1 = 1e-3, rho2 = 1e-3, optimizer_options = {}):
         self.noc = noc
         self.solver = solver
         self.sigma = sigma
         self.rho1 = rho1
         self.rho2 = rho2
+        self.optimizer_options = optimizer_options
 
         self.X = None
         self.Y = None
@@ -103,9 +104,7 @@ class RbfNN(BaseEstimator):
             fun = self.__error_function,
             x0 = np.concatenate((self.centers.flatten(), self.weights), axis = 0),
             method = self.solver,
-            options = {
-                'maxiter' : 50
-            }
+            options = self.optimizer_options
         )
 
         self.result = result
