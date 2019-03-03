@@ -7,6 +7,8 @@ from src.sol_1.lib.rbf_nn_bc import RbfNNBC
 from sklearn.preprocessing import normalize
 from sklearn.model_selection import GridSearchCV
 
+from src.lib.pushover import notify_me
+
 ##
 
 train_1 = pd.read_csv('data/Train_1.csv').iloc[:, :257]
@@ -42,5 +44,8 @@ print(gs.cv_results_)
 output_file = "data/output/rbf_nn_bc_" + str(datetime.datetime.now()) + ".pickle"
 pickle.dump(gs, open(output_file, 'wb'))
 
+notify_me("|| Gridsearch Completed ||", 1)
+
 ##
+
 
