@@ -3,20 +3,18 @@ import datetime
 import numpy as np
 import pandas as pd
 
-from src.sol_1.lib.rbf_nn_bc import RbfNNBC
 from sklearn.preprocessing import normalize
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import GridSearchCV
-
-from src.lib.pushover import notify_me
+from src.sol_2.lib.svm_bc import linear_kernel, polynomial_kernel, gaussian_kernel, SVMBC
 
 ##
 
 train_1 = pd.read_csv('data/Train_1.csv').iloc[:, :257]
 train_8 = pd.read_csv('data/Train_8.csv').iloc[:, :257]
 
-train_1.iloc[:, 0] = 0 # (1005, 257)
-train_8.iloc[:, 0] = 1 # (542, 257)
+train_1.iloc[:, 0] = 1 # (1005, 257)
+train_8.iloc[:, 0] = -1 # (542, 257)
 
 train_data = np.asanyarray(pd.concat([train_1.iloc[:, :], train_8.iloc[:, :]], axis=0, ignore_index=True))
 
@@ -25,39 +23,14 @@ Y = train_data[:, 0]
 
 ##
 
-param_grid = {
-    'noc' : [4],
-    'solver' : ['BFGS'],
-    'sigma' : [2],
-    'rho' : [1e-5]
-}
-
-gs = GridSearchCV(
-    RbfNNBC(),
-    param_grid,
-    n_jobs=-1,
-    scoring='accuracy'
-).fit(X, y=Y)
-
-print("Grid Search completed")
-print(gs.cv_results_)
-
-output_file = "data/output/rbf_nn_bc_" + str(datetime.datetime.now()) + ".pickle"
-pickle.dump(gs, open(output_file, 'wb'))
-
-# notify_me("|| Gridsearch Completed ||", 1)
-
-##
-
-model = RbfNNBC(noc = 4, solver = 'L-BFGS-B', sigma = 2, rho = 1e-5).fit(X, Y)
+model = SVMBC().fit(X, Y)
 
 ##
 
 test_1 = pd.read_csv('data/Test_1.csv').iloc[:, :257]
 test_8 = pd.read_csv('data/Test_8.csv').iloc[:, :257]
-
-test_1.iloc[:, 0] = 0 # (1005, 257)
-test_8.iloc[:, 0] = 1 # (542, 257)
+test_1.iloc[:, 0] = 1 # (1005, 257)
+test_8.iloc[:, 0] = -1 # (542, 257)
 
 test_data = np.asanyarray(pd.concat([test_1.iloc[:, :], test_8.iloc[:, :]], axis=0, ignore_index=True))
 

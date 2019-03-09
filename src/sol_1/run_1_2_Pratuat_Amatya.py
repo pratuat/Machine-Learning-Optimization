@@ -3,7 +3,7 @@ import datetime
 import numpy as np
 import pandas as pd
 
-from src.sol_1.lib.rbf_nn_bc import RbfNNBC
+from src.sol_1.lib.rbf_nn_bc_bd import RbfNNBCBD
 from sklearn.preprocessing import normalize
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import GridSearchCV
@@ -27,13 +27,13 @@ Y = train_data[:, 0]
 
 param_grid = {
     'noc' : [4],
-    'solver' : ['BFGS'],
+    'solver' : ['L-BFGS-B'],
     'sigma' : [2],
     'rho' : [1e-5]
 }
 
 gs = GridSearchCV(
-    RbfNNBC(),
+    RbfNNBCBD(),
     param_grid,
     n_jobs=-1,
     scoring='accuracy'
@@ -42,14 +42,12 @@ gs = GridSearchCV(
 print("Grid Search completed")
 print(gs.cv_results_)
 
-output_file = "data/output/rbf_nn_bc_" + str(datetime.datetime.now()) + ".pickle"
+output_file = "data/output/rbf_nn_bc_bd" + str(datetime.datetime.now()) + ".pickle"
 pickle.dump(gs, open(output_file, 'wb'))
-
-# notify_me("|| Gridsearch Completed ||", 1)
 
 ##
 
-model = RbfNNBC(noc = 4, solver = 'L-BFGS-B', sigma = 2, rho = 1e-5).fit(X, Y)
+model = RbfNNBCBD(noc = 4, solver = 'L-BFGS-B', sigma = 2, rho = 1e-5, epsilon=1e-4).fit(X, Y)
 
 ##
 

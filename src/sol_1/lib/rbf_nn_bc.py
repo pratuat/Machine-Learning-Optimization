@@ -4,11 +4,9 @@ from sklearn.cluster import KMeans
 from sklearn.base import BaseEstimator
 from sklearn.metrics.pairwise import rbf_kernel
 
-from src.lib.pushover import notify_me
-
 
 class RbfNNBC(BaseEstimator):
-    def __init__(self, noc = 5, solver = 'BFGS', sigma = 2, rho = 1e-3, optimizer_options = {}):
+    def __init__(self, noc = 5, solver = 'L-BFGS-B', sigma = 2, rho = 1e-3, optimizer_options = {}):
         self.noc = noc
         self.solver = solver
         self.sigma = sigma
@@ -55,8 +53,6 @@ class RbfNNBC(BaseEstimator):
         print('='*50)
         print(message)
         print('=' * 50)
-
-        notify_me(message)
 
     def __error_function(self, training_parameters):
         self.__set_centers_and_weights(training_parameters)
