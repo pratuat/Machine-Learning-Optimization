@@ -1,11 +1,13 @@
+import time
 import numpy as np
 import scipy.optimize as optimize
+from scipy.linalg import norm
 from sklearn.cluster import KMeans
 from sklearn.base import BaseEstimator
 from sklearn.metrics.pairwise import rbf_kernel
 
 
-class RbfNNBC(BaseEstimator):
+class Rbf(BaseEstimator):
     def __init__(self, noc = 5, solver = 'L-BFGS-B', sigma = 2, rho = 1e-3, optimizer_options = {}):
         self.noc = noc
         self.solver = solver
@@ -20,6 +22,14 @@ class RbfNNBC(BaseEstimator):
         self.centers = None
         self.weights = None
         self.interpolation_matrix = None
+
+        self.train_squared_error = []
+        self.train_total_error = []
+        self.train_reg_error = []
+        self.prev_training_params = None
+        self.current_training_params = None
+        self.optimization_time = None
+        self.test_error = None
 
     def __setup_centers(self):
         self.centers = KMeans(
@@ -54,6 +64,9 @@ class RbfNNBC(BaseEstimator):
         print(message)
         print('=' * 50)
 
+    def __final_gradient_norm(self):
+        return norm(self.current_training_params - self.prev_training_params)
+
     def __error_function(self, training_parameters):
         self.__set_centers_and_weights(training_parameters)
 
@@ -65,10 +78,17 @@ class RbfNNBC(BaseEstimator):
         regularization_error = self.rho/2 * (np.sum(np.square(self.weights)) + np.sum(np.square(self.centers.flatten())))
         total_error = sum_of_squared_error + regularization_error
 
+        self.train_squared_error.append(sum_of_squared_error)
+        self.train_reg_error.append(regularization_error)
+        self.train_total_error.append(total_error)
+
+        self.prev_training_params = self.current_training_params
+        self.current_training_params = training_parameters
+
         return total_error
 
-    def fit(self, x, y=None):
-        self.__print_model_params('[BEGIN]')
+    def fit(self, x, y):
+        # self.__print_model_params('[BEGIN]')
 
         self.X = x
         self.Y = y
@@ -76,23 +96,47 @@ class RbfNNBC(BaseEstimator):
         self.__setup_centers()
         self.__setup_weights()
 
+        start = time.time()
         result = optimize.minimize(
             fun = self.__error_function,
             x0 = np.concatenate((self.centers.flatten(), self.weights), axis = 0),
             method = self.solver,
             options = self.optimizer_options
         )
-
-        self.__print_model_params('[END]')
+        end = time.time()
+        self.optimization_time = end - start
 
         self.result = result
         self.__set_centers_and_weights(result.x)
 
+        # self.__print_model_params('[END]')
+
         return self
 
-    def predict(self, x, y=None):
+    def predict(self, x):
         interpolation_matrix = self.__setup_interpolation_matrix(x)
         predictions = np.dot(interpolation_matrix, self.weights)
 
         return self.__to_binary(predictions)
 
+    def test(self, x, y):
+        interpolation_matrix = self.__setup_interpolation_matrix(x)
+        predictions = np.dot(interpolation_matrix, self.weights)
+
+        self.test_error = self.__sum_of_squared_error(predictions, y)
+
+        return self.__to_binary(predictions), self.test_error
+
+    def statistics(self):
+        return [
+            ('Number of neurons N:', self.noc),
+            ('Initial Training Error:', self.train_squared_error[0]),
+            ('Final Training Error:', self.train_squared_error[-1]),
+            ('Final Test Error:', self.test_error),
+            ('Norm of the gradient at the final point:', self.__final_gradient_norm()),
+            ('Optimization solver chosen:', self.solver),
+            ('Total Number of function/gradient evaluations:', self.result.nfev),
+            ('Time for optimizing the network (seconds):', self.optimization_time ),
+            ('Value of σ:',self.sigma),
+            ('Value of ρ:', self.rho)
+        ]

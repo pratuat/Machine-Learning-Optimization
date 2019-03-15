@@ -3,9 +3,11 @@ import scipy.optimize as optimize
 from sklearn.cluster import KMeans
 from sklearn.base import BaseEstimator
 from sklearn.metrics.pairwise import rbf_kernel
+from scipy.linalg import norm
+import time
 
 
-class RbfNNBCBD(BaseEstimator):
+class RbfBD(BaseEstimator):
     def __init__(self, noc = 5, solver = 'L-BFGS-B', sigma = 2, rho=1e-3,
                  max_iter = None, epsilon = 1e-6, optimizer_options = {}):
         self.noc = noc
@@ -23,6 +25,16 @@ class RbfNNBCBD(BaseEstimator):
         self.centers = None
         self.weights = None
         self.interpolation_matrix = None
+
+        self.train_squared_error = []
+        self.train_total_error = []
+        self.train_reg_error = []
+
+        self.prev_training_params = None
+        self.current_training_params = None
+
+        self.optimization_time = None
+        self.test_error = None
 
     def __setup_centers(self):
         self.centers = KMeans(
@@ -61,6 +73,9 @@ class RbfNNBCBD(BaseEstimator):
         self.interpolation_matrix = rbf_kernel(X=x, Y=self.centers, gamma=1/self.sigma**2)
         return self.interpolation_matrix
 
+    def __final_gradient_norm(self):
+        return norm(self.current_training_params - self.prev_training_params)
+
     def __error_function(self, training_parameters, obj_func_args):
         # pdb.set_trace()
         self.__set_centers_and_weights(training_parameters, mode = obj_func_args)
@@ -74,6 +89,13 @@ class RbfNNBCBD(BaseEstimator):
         regularization_error = self.rho/2 *(np.sum(np.square(self.weights)) + np.sum(np.square(self.centers.flatten())))
         total_error = sum_of_squared_error + regularization_error
 
+        self.train_squared_error.append(sum_of_squared_error)
+        self.train_reg_error.append(regularization_error)
+        self.train_total_error.append(total_error)
+
+        self.prev_training_params = self.current_training_params
+        self.current_training_params = training_parameters
+
         return total_error
 
     def fit(self, x, y = None):
@@ -86,17 +108,11 @@ class RbfNNBCBD(BaseEstimator):
         train_accuracy = 0
         iteration = 0
 
+        start = time.time()
         while True:
             print("Iteration: ", iteration)
 
-            # if minimization_block == 0:
-            #     minimize centers and weights
-            # else if minimization_block == 1:
-            #     minimize centers
-            # else if minimization_block == 2:
-            #     minimize linear weights
-
-            print('INFO: Minimizing centers.')
+            # print('INFO: Minimizing centers.')
             result_1 = optimize.minimize(
                 fun = self.__error_function,
                 x0 = self.centers.flatten(),
@@ -107,7 +123,7 @@ class RbfNNBCBD(BaseEstimator):
 
             self.__set_centers_and_weights(result_1.x, mode = 1)
 
-            print('INFO: Minimizing weights.')
+            # print('INFO: Minimizing weights.')
             self.__setup_interpolation_matrix(self.X)
             result_2 = optimize.minimize(
                 fun = self.__error_function,
@@ -133,6 +149,9 @@ class RbfNNBCBD(BaseEstimator):
             else:
                  train_accuracy = accuracy
 
+        end = time.time()
+        self.optimization_time = end - start
+
         self.result = (result_1, result_2)
 
         return self
@@ -148,3 +167,24 @@ class RbfNNBCBD(BaseEstimator):
 
         return self.__to_binary(predictions)
 
+    def test(self, x, y):
+        interpolation_matrix = self.__setup_interpolation_matrix(x)
+        predictions = np.dot(interpolation_matrix, self.weights)
+
+        self.test_error = self.__sum_of_squared_error(predictions, y)
+
+        return self.__to_binary(predictions), self.test_error
+
+    def statistics(self):
+        return [
+            ('Number of neurons N:', self.noc),
+            ('Initial Training Error:', self.train_squared_error[0]),
+            ('Final Training Error:', self.train_squared_error[-1]),
+            ('Final Test Error:', self.test_error),
+            ('Norm of the gradient at the final point:', self.__final_gradient_norm()),
+            ('Optimization solver chosen:', self.solver),
+            ('Total Number of function/gradient evaluations:', len(self.train_squared_error)),
+            ('Time for optimizing the network (seconds):', self.optimization_time ),
+            ('Value of σ:',self.sigma),
+            ('Value of ρ:', self.rho)
+        ]

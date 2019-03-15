@@ -1,9 +1,9 @@
 import numpy as np
 from sklearn.base import BaseEstimator
-from src.sol_1.lib.rbf_nn_bc import RbfNNBC
+from src.sol_1.lib.rbf import Rbf
 
-class RbfNNMC(BaseEstimator):
-    def __init__(self, noc = 5, solver = 'BFGS', sigma = 2, rho = 1e-3):
+class RbfMC(BaseEstimator):
+    def __init__(self, noc = 4, solver = 'L-BFGS-B', sigma = 2, rho = 1e-5):
         self.noc = noc
         self.solver = solver
         self.sigma = sigma
@@ -24,7 +24,7 @@ class RbfNNMC(BaseEstimator):
         self.models = []
 
         for i in range(self.Y_dim):
-            model = RbfNNBC(
+            model = Rbf(
                 noc = self.noc,
                 solver = self.solver,
                 sigma = self.sigma,
