@@ -63,7 +63,7 @@ test_results = confusion_matrix(test_y_data[:], label_binarizer.inverse_transfor
 
 ##
 
-print("Algorithm used: one-against-all")
+print("Algorithm used:", 'one-against-all')
 print("Optimization solver:", model.solver)
 print("Misclassification rate on training set:", 1 - train_results.diagonal().sum()/train_results.sum())
 print("Misclassification rate on test set:", 1 - test_results.diagonal().sum()/test_results.sum())

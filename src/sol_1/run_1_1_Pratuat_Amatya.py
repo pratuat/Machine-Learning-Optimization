@@ -52,12 +52,6 @@ gs = GridSearchCV(
 ).fit(X, Y)
 
 print("Grid Search completed")
-# print(gs.cv_results_)
-
-# output_file = "data/output/rbf_nn_bc_" + str(datetime.datetime.now()) + ".pickle"
-# pickle.dump(gs, open(output_file, 'wb'))
-#
-# # notify_me("|| Gridsearch Completed ||", 1)
 
 ##
 
@@ -66,7 +60,7 @@ predictions = model.test(Xt, Yt)
 
 ##
 
-
 _ = [print(*k) for k in model.statistics()]
+
 ##
 

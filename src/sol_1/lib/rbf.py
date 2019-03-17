@@ -6,7 +6,6 @@ from sklearn.cluster import KMeans
 from sklearn.base import BaseEstimator
 from sklearn.metrics.pairwise import rbf_kernel
 
-
 class Rbf(BaseEstimator):
     def __init__(self, noc = 5, solver = 'L-BFGS-B', sigma = 2, rho = 1e-3, optimizer_options = {}):
         self.noc = noc
@@ -140,3 +139,5 @@ class Rbf(BaseEstimator):
             ('Value of σ:',self.sigma),
             ('Value of ρ:', self.rho)
         ]
+##
+
