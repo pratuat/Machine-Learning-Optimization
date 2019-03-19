@@ -1,13 +1,8 @@
-import pickle
-import datetime
 import numpy as np
 import pandas as pd
 
 from src.sol_1.lib.rbf import Rbf
 from sklearn.preprocessing import normalize
-from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import GridSearchCV
-
 
 ##
 
@@ -37,30 +32,10 @@ Yt = test_data[:, 0]
 
 ##
 
-param_grid = {
-    'noc' : [4],
-    'solver' : ['L-BFGS-B'],
-    'sigma' : [2],
-    'rho' : [1e-5]
-}
-
-gs = GridSearchCV(
-    Rbf(),
-    param_grid,
-    n_jobs=-1,
-    scoring='accuracy'
-).fit(X, Y)
-
-print("Grid Search completed")
+model = Rbf(noc=4, rho=1e-08, sigma=2, solver='L-BFGS-B').fit(X, Y)
 
 ##
 
-model = Rbf(noc = 4, solver = 'L-BFGS-B', sigma = 2, rho = 1e-5).fit(X, Y)
 predictions = model.test(Xt, Yt)
-
-##
-
 _ = [print(*k) for k in model.statistics()]
-
-##
 

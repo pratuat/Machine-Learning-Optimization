@@ -87,7 +87,7 @@ class Rbf(BaseEstimator):
         return total_error
 
     def fit(self, x, y):
-        # self.__print_model_params('[BEGIN]')
+        self.__print_model_params('[BEGIN]')
 
         self.X = x
         self.Y = y
@@ -108,7 +108,7 @@ class Rbf(BaseEstimator):
         self.result = result
         self.__set_centers_and_weights(result.x)
 
-        # self.__print_model_params('[END]')
+        self.__print_model_params('[END]')
 
         return self
 

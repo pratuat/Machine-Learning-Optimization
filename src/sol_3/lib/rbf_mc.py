@@ -3,7 +3,7 @@ from sklearn.base import BaseEstimator
 from src.sol_1.lib.rbf import Rbf
 
 class RbfMC(BaseEstimator):
-    def __init__(self, noc = 4, solver = 'L-BFGS-B', sigma = 2, rho = 1e-5):
+    def __init__(self, noc = 4, solver = 'L-BFGS-B', sigma = 2, rho = 1e-7):
         self.noc = noc
         self.solver = solver
         self.sigma = sigma

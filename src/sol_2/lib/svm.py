@@ -21,6 +21,9 @@ class SVM(BaseEstimator):
         self.optimization_time = None
 
     def fit(self, X, Y):
+        print('==' * 25)
+        print("Fitting: ", self.gamma)
+        print('==' * 25)
         no_of_samples, no_of_features = X.shape
 
         kernel_dist = np.zeros((no_of_samples, no_of_samples))
@@ -81,7 +84,7 @@ class SVM(BaseEstimator):
             ('Numbers to classify:', '1 and 8'),
             ('Optimization time:', self.optimization_time),
             ('Value of γ:', self.gamma),
-            ('Optimization solver chose:', 'cvxopt'),
+            ('Optimization solver chosen:', 'cvxopt'),
             ('Total number of iterations:', self.solution['iterations'])
         ]
 

@@ -35,7 +35,7 @@ Yt = test_data[:, 0]
 
 ##
 
-model = SVMSMO().fit(X, Y)
+model = SVMSMO(gamma=0.02).fit(X, Y)
 
 ##
 
@@ -43,11 +43,6 @@ train_results = confusion_matrix(Y.astype(int), model.predict(X))
 test_results = confusion_matrix(Yt.astype(int), model.predict(Xt))
 
 _ = [print(*k) for k in model.statistics()]
-
 print("Misclassification rate on training set:", 1 - train_results.diagonal().sum()/train_results.sum())
 print("Misclassification rate on test set:", 1 - test_results.diagonal().sum()/test_results.sum())
 
-##
-
-# [[165   1]
-#  [  5 259]]

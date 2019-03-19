@@ -144,7 +144,7 @@ class RbfBD(BaseEstimator):
 
             print("Train Accuracy: ", accuracy)
 
-            if abs(accuracy - train_accuracy) < self.epsilon:
+            if abs(accuracy - train_accuracy) < self.epsilon or accuracy > 0.99:
                 break
             else:
                  train_accuracy = accuracy
@@ -186,5 +186,9 @@ class RbfBD(BaseEstimator):
             ('Total Number of function/gradient evaluations:', len(self.train_squared_error)),
             ('Time for optimizing the network (seconds):', self.optimization_time ),
             ('Value of σ:',self.sigma),
-            ('Value of ρ:', self.rho)
+            ('Value of ρ:', self.rho),
+            ('Value of accuracy convergence threshold', self.epsilon)
         ]
+
+##
+

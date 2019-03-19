@@ -54,10 +54,12 @@ Y = label_binarizer.fit_transform(train_y_data[:])
 Xt = test_x_data[:, :]
 Yt = label_binarizer.transform(test_y_data[:])
 
-model = RbfMC().fit(X, Y)
+model = RbfMC(noc = 4, solver = 'L-BFGS-B', sigma = 2, rho = 1e-7).fit(X, Y)
 train_predictions = model.predict(X)
 test_predictions = model.predict(Xt)
+
 ##
+
 train_results = confusion_matrix(train_y_data[:], label_binarizer.inverse_transform(train_predictions))
 test_results = confusion_matrix(test_y_data[:], label_binarizer.inverse_transform(test_predictions))
 
@@ -67,6 +69,7 @@ print("Algorithm used:", 'one-against-all')
 print("Optimization solver:", model.solver)
 print("Misclassification rate on training set:", 1 - train_results.diagonal().sum()/train_results.sum())
 print("Misclassification rate on test set:", 1 - test_results.diagonal().sum()/test_results.sum())
+print("Optimization time: ", sum([m.optimization_time for m in model.models]))
 
 ##
 
